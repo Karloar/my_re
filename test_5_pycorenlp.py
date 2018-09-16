@@ -1,4 +1,4 @@
-from stanfordcorenlp import StanfordCoreNLP
+from pycorenlp import StanfordCoreNLP
 import os
 import logging
 import numpy as np
@@ -129,28 +129,8 @@ if __name__ == '__main__':
     # sentence_list = ['新加坡《联合早报》曝出了赵薇与上海知名人士汪雨的儿子汪道涵热恋。']
     
     sentence = "Kosgi Santosh sent an email to Stanford University. He didn't get a reply"
-    with StanfordCoreNLP(stanfordcorepath, lang='zh', logging_level=None) as stanford:
-        # for sentence in sentence_list:
-        #     dependency_tree = stanford.dependency_parse(sentence)
-        #     word_list = stanford.word_tokenize(sentence)
-        #     # ner = stanford.ner(sentence)
-        #     # print(ner)
-        #     q_set = ['赵薇']
-        #     f_set = ['汪道涵']
-        #     pr_vector = get_PR_vector(q_set, word_list)
-        #     a_matrix = get_A_Matrix(word_list, dependency_tree)
-        #     q_pi_vector = page_rank(q_set, word_list, dependency_tree)
-        #     f_pi_vecgor = page_rank(f_set, word_list, dependency_tree)
-        #     i_vector = get_I_vector(q_pi_vector, f_pi_vecgor)
-
-        #     word_vector = np.array(word_list)
-        #     sorted_word_vector = word_vector[np.argsort(i_vector.T)]
-        #     sorted_i_vector = np.sort(i_vector.T)
-        #     # print(sorted_word_vector)
-        #     # print(sorted_i_vector)
-
-        #     for w, i in zip(sorted_word_vector[0], sorted_i_vector[0]):
-        #         print(w, i)
-        coref = stanford.annotate('小明想吃冰棒，他买了一根。')
-        print(coref)
+    
+    nlp = StanfordCoreNLP('http://localhost:9000/')
+    coref = nlp.annotate('小明想吃冰棒，他买了一根。')
+    print(coref)
 

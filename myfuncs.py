@@ -1,4 +1,5 @@
 import numpy as np
+from functools import cmp_to_key
 
 
 def load_data(file):
@@ -144,3 +145,50 @@ def get_I_vector(q_pi_vector, f_pi_vector):
         :param  f_pi_vector I(v|F)
     '''
     return f_pi_vector + f_pi_vector * q_pi_vector + q_pi_vector
+
+
+def get_sorted_word_I_list(word_list, i_vector):
+    '''
+        将词语与对应的I值从大到小排序，返回(词语，I值)列表
+        :param  word_list   分词后的词列表
+        :param  i_vector    计算出的I向量
+        :return (词语，I值)列表
+    '''
+    if type(i_vector) == np.ndarray:
+        i_vector = i_vector.reshape((len(i_vector, ))).tolist()
+    sorted_list = []
+    for word, i, idx in zip(word_list, i_vector, range(len(word_list))):
+        sorted_list.append((word, i, idx))
+
+    def mycmp(x, y):
+        if x[1] > y[1]:
+            return -1
+        if x[1] < y[1]:
+            return 1
+        return 0
+
+    sorted_list = sorted(sorted_list, key=cmp_to_key(mycmp))
+    return sorted_list
+
+
+def get_person_entity_set(word_list, nertags):
+    '''
+        从分词后的词列表中找到人物实体
+        :param  word_list   分词后的词列表
+        :param  nertags     标记列表
+        :return 人物实体集合
+    '''
+    person_entity = set()
+    for word, nertag in zip(word_list, nertags):
+        if nertag == 'S-Nh':
+            person_entity.add(word)
+    return person_entity
+
+
+def get_relation_word(word_list, i_vector, postags, q_set, r_set):
+    sorted_word_i_list = get_sorted_word_I_list(word_list, i_vector)
+    for word, i, idx in sorted_word_i_list:
+        if word in q_set or word in r_set:
+            continue
+        
+    

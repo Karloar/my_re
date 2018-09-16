@@ -1,8 +1,8 @@
 from myfuncs import page_rank, get_I_vector
-from myfuncs import arcs_to_dependency_tree
+from myfuncs import arcs_to_dependency_tree, get_sorted_word_I_list
+from myfuncs import get_person_entity_set
 from pyltp import Segmentor, NamedEntityRecognizer, Parser, Postagger
 import os
-import numpy as np
 import platform
 
 
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     parser = Parser()
     parser.load(parser_model)
 
-    sentence_list = ['新加坡《联合早报》曝出了赵薇与上海知名人士汪雨的儿子汪道涵热恋中。']
+    sentence_list = ['新加坡《联合早报》曝出了赵薇与上海知名人士张三的儿子汪道涵热恋中。']
     q_set = ['赵薇']
     f_set = ['汪道涵']
 
@@ -39,21 +39,14 @@ if __name__ == '__main__':
     arcs = parser.parse(word_list, postags)
     dependency_tree = arcs_to_dependency_tree(arcs)
     nertags = ner.recognize(word_list, postags)
-    for word, postag in zip(word_list, postags):
-        print(word, postag)
-
-    # print(dependency_tree)
+    person_entity_set = get_person_entity_set(word_list, nertags)
 
     q_pi_vector = page_rank(q_set, word_list, dependency_tree)
     f_pi_vector = page_rank(f_set, word_list, dependency_tree)
 
     i_vector = get_I_vector(q_pi_vector, f_pi_vector)
     
-    word_vector = np.array(word_list)
-    sorted_word_vector = word_vector[np.argsort(i_vector.T)]
-    sorted_i_vector = np.sort(i_vector.T)
-
-    for w, i in zip(sorted_word_vector[0], sorted_i_vector[0]):
-        print(w, i)
-
+    sorted_word_I_list = get_sorted_word_I_list(word_list, i_vector)
+    for word, i_value, _ in sorted_word_I_list:
+        print(word, i_value)
 

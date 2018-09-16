@@ -1,0 +1,1 @@
+from nltk.parse.corenlp import CoreNLPParser
