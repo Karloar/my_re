@@ -3,10 +3,13 @@ from myfuncs import arcs_to_dependency_tree
 from pyltp import Segmentor, NamedEntityRecognizer, Parser, Postagger
 import os
 import numpy as np
+import platform
 
 
 cwd = os.getcwd()
-model_dir = r'E:\ltp_data'
+model_dir = '/Users/karloar/Documents/other/ltp_data_v3.4.0'
+if platform.system() == 'Windows':
+    model_dir = r'E:\ltp_data'
 
 cws_model = os.path.join(model_dir, 'cws.model')
 cwd_dict = os.path.join(cwd, 'dict.txt')

@@ -2,10 +2,14 @@ from stanfordcorenlp import StanfordCoreNLP
 import os
 import logging
 import numpy as np
+import platform
 
 
 cwd = os.getcwd()
-stanfordcorepath = os.path.join(cwd, 'stanford-corenlp-full-2018-02-27')
+mac_path = "/Users/karloar/Documents/other"
+stanfordcorepath = os.path.join(mac_path, 'stanford-corenlp-full-2018-02-27')
+if platform.system() == 'Windows':
+    stanfordcorepath = os.path.join(cwd, 'stanford-corenlp-full-2018-02-27')
 data_file = os.path.join(cwd, 'train.txt')
 
 
