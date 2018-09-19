@@ -1,6 +1,6 @@
-from myfuncs import page_rank, get_I_vector
-from myfuncs import arcs_to_dependency_tree, get_sorted_word_I_list
-from myfuncs import get_person_entity_set
+from myfuncs import page_rank, get_I_vector, get_relation_word_top_n
+from myfuncs import arcs_to_dependency_tree
+from myfuncs import get_person_entity_set, get_modifier_set
 from pyltp import Segmentor, NamedEntityRecognizer, Parser, Postagger
 import os
 import platform
@@ -30,23 +30,26 @@ if __name__ == '__main__':
     parser = Parser()
     parser.load(parser_model)
 
-    sentence_list = ['新加坡《联合早报》曝出了赵薇与上海知名人士张三的儿子汪道涵热恋中。']
-    q_set = ['赵薇']
-    f_set = ['汪道涵']
+    sentence_list = ['新加坡《联合早报》曝出了赵薇最近与上海知名人士汪雨的儿子汪道涵热恋。']
+    for sentence in sentence_list:
+        word_list = segmentor.segment(sentence)
+        postags = postagger.postag(word_list)
+        arcs = parser.parse(word_list, postags)
+        nertags = ner.recognize(word_list, postags)
 
-    word_list = segmentor.segment(sentence_list[0])
-    postags = postagger.postag(word_list)
-    arcs = parser.parse(word_list, postags)
-    dependency_tree = arcs_to_dependency_tree(arcs)
-    nertags = ner.recognize(word_list, postags)
-    person_entity_set = get_person_entity_set(word_list, nertags)
+        person_entity_list = list(get_person_entity_set(word_list, nertags))
+        dependency_tree = arcs_to_dependency_tree(arcs)
 
-    q_pi_vector = page_rank(q_set, word_list, dependency_tree)
-    f_pi_vector = page_rank(f_set, word_list, dependency_tree)
+        for i in range(len(person_entity_list)):
+            for j in range(i+1, len(person_entity_list)):
+                q_set = [person_entity_list[i]]
+                f_set = [person_entity_list[j]]
 
-    i_vector = get_I_vector(q_pi_vector, f_pi_vector)
-    
-    sorted_word_I_list = get_sorted_word_I_list(word_list, i_vector)
-    for word, i_value, _ in sorted_word_I_list:
-        print(word, i_value)
+                modifier_set = get_modifier_set(word_list, dependency_tree, q_set[0], f_set[0])
 
+                q_pi_vector = page_rank(q_set, word_list, dependency_tree)
+                f_pi_vector = page_rank(f_set, word_list, dependency_tree)
+                i_vector = get_I_vector(q_pi_vector, f_pi_vector)
+
+                relation_word = get_relation_word_top_n(word_list, i_vector, postags, q_set, f_set, n=3)
+                print(q_set[0], f_set[0], relation_word)

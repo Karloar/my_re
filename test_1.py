@@ -3,13 +3,14 @@ import os
 import logging
 import numpy as np
 import platform
+from myfuncs import get_sorted_word_I_list
 
 
 cwd = os.getcwd()
 mac_path = "/Users/karloar/Documents/other"
 stanfordcorepath = os.path.join(mac_path, 'stanford-corenlp-full-2018-02-27')
 if platform.system() == 'Windows':
-    stanfordcorepath = os.path.join(cwd, 'stanford-corenlp-full-2018-02-27')
+    stanfordcorepath = os.path.join('I:\\python\\stanford', 'stanford-corenlp-full-2018-02-27')
 data_file = os.path.join(cwd, 'train.txt')
 
 
@@ -126,28 +127,24 @@ def get_I_vector(q_pi_vector, f_pi_vector):
 
 if __name__ == '__main__':
     # sentence_list, entity_relation = load_data(data_file)
-    sentence_list = ['新加坡《联合早报》曝出了赵薇与上海知名人士汪雨的儿子汪道涵热恋。']
-    with StanfordCoreNLP(stanfordcorepath, lang='zh', logging_level=None) as stanford:
+    # sentence_list = ['新加坡《联合早报》曝出了赵薇与上海知名人士张三的儿子汪道涵热恋。']
+    sentence_list = ['EllenGriffinDunne, from whom DominickDunne was divorced in 1965, died in 1997.']
+    with StanfordCoreNLP(stanfordcorepath, lang='en', logging_level=None) as stanford:
         for sentence in sentence_list:
             dependency_tree = stanford.dependency_parse(sentence)
+            print(dependency_tree)
             word_list = stanford.word_tokenize(sentence)
             # ner = stanford.ner(sentence)
             # print(ner)
-            q_set = ['赵薇']
-            f_set = ['汪道涵']
+            q_set = ['DominickDunne']
+            f_set = ['EllenGriffinDunne']
             pr_vector = get_PR_vector(q_set, word_list)
             a_matrix = get_A_Matrix(word_list, dependency_tree)
             q_pi_vector = page_rank(q_set, word_list, dependency_tree)
             f_pi_vecgor = page_rank(f_set, word_list, dependency_tree)
             i_vector = get_I_vector(q_pi_vector, f_pi_vecgor)
 
-            word_vector = np.array(word_list)
-            sorted_word_vector = word_vector[np.argsort(i_vector.T)]
-            sorted_i_vector = np.sort(i_vector.T)
-            # print(sorted_word_vector)
-            # print(sorted_i_vector)
-
-            for w, i in zip(sorted_word_vector[0], sorted_i_vector[0]):
-                print(w, i)
+            for word, i, _ in get_sorted_word_I_list(word_list, i_vector):
+                print(word, i)
             
 
