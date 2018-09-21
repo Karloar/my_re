@@ -12,8 +12,11 @@ def load_data(file):
     with open(file, 'r', encoding='utf-8') as f:
         for line in f.readlines():
             x = line.split()
-            sentence_list.append(x[-1])
-            entity_relation.append((x[0], x[1], x[2]))
+            if len(x) == 4:
+                sentence_list.append(x[-1])
+                entity_relation.append((x[0], x[1], x[2]))
+            elif len(x) == 1:
+                sentence_list.append(x[-1])
     return sentence_list, entity_relation
 
 
