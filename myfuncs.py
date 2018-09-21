@@ -192,29 +192,27 @@ def get_person_entity_set(word_list, nertags):
     return person_entity
 
 
-def get_relation_word_top_n(word_list, i_vector, postags, q_set, f_set, n=1):
+def get_relation_candidate(word_list, i_vector, postags, q_set, f_set):
     '''
-    返回n个最有可能代表关系的词语
+    返回代表关系的候选词语
     :param  word_list   分词后的词列表
     :param  i_vector    计算出的I 向量
     :param  postags     词性列表
     :param  q_set
     :param  f_set
     :param  n           最多返回n个, 默认是1个
-    :return relation_word_list  关系词列表
+    :return relation_candidate_list  关系词列表
     '''
     sorted_word_i_list = get_sorted_word_I_list(word_list, i_vector)
     postag_set = {'n', 'v', 'a'}
-    relation_word_list = list()
+    relation_candidate_list = list()
     for word, i, idx in sorted_word_i_list:
         if word in q_set or word in f_set:
             continue
         if postags[idx] not in postag_set:
             continue
-        relation_word_list.append((word, i))
-        if len(relation_word_list) >= n:
-            break
-    return relation_word_list
+        relation_candidate_list.append((word, i))
+    return relation_candidate_list
 
 
 def get_content_from_ltp(sentence, pattern):
@@ -314,3 +312,13 @@ def init_pyltp(model_dir, dict_file=None):
     ner.load(ner_model)
     parser.load(parser_model)
     return segmentor, postagger, parser, ner
+
+
+def get_relation_candidate_vector(relation_candidate_list, word2vec_model):
+    word_vec = []
+    for word, _ in relation_candidate_list:
+        if word in word2vec_model:
+            word_vec.append(word2vec_model[word])
+        else:
+            word_vec.append([0] * 100)
+    return np.array(word_vec)
