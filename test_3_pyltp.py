@@ -1,7 +1,6 @@
 from myfuncs import page_rank, get_I_vector, get_relation_word_top_n
-from myfuncs import arcs_to_dependency_tree
+from myfuncs import arcs_to_dependency_tree, init_pyltp
 from myfuncs import get_person_entity_set, get_modifier_set
-from pyltp import Segmentor, NamedEntityRecognizer, Parser, Postagger
 import os
 import platform
 
@@ -11,32 +10,24 @@ model_dir = '/Users/karloar/Documents/other/ltp_data_v3.4.0'
 if platform.system() == 'Windows':
     model_dir = r'E:\ltp_data'
 
-cws_model = os.path.join(model_dir, 'cws.model')
-cwd_dict = os.path.join(cwd, 'dict.txt')
-pos_model = os.path.join(model_dir, 'pos.model')
-ner_model = os.path.join(model_dir, 'ner.model')
-parser_model = os.path.join(model_dir, 'parser.model')
+dict_file = os.path.join(cwd, 'dict.txt')
 
 
 if __name__ == '__main__':
 
-    segmentor = Segmentor()
-    segmentor.load_with_lexicon(cws_model, cwd_dict)
-    # segmentor.load(cws_model)
-    postagger = Postagger()
-    postagger.load(pos_model)
-    ner = NamedEntityRecognizer()
-    ner.load(ner_model)
-    parser = Parser()
-    parser.load(parser_model)
+    segmentor, postagger, parser, ner = init_pyltp(model_dir, dict_file)
 
-    sentence_list = ['新加坡《联合早报》曝出了赵薇最近与上海知名人士汪雨的儿子汪道涵热恋。']
+    sentence_list = [
+        '新加坡《联合早报》曝出了赵薇最近与上海知名人士汪雨的儿子汪道涵热恋。',
+        '从相恋到结婚，辛柏青和朱媛媛的爱情生活也是鲜有人知。',
+        '廖国栋呼吁陈水扁放开心胸。',
+    ]
     for sentence in sentence_list:
         word_list = segmentor.segment(sentence)
         postags = postagger.postag(word_list)
         arcs = parser.parse(word_list, postags)
         nertags = ner.recognize(word_list, postags)
-
+     
         person_entity_list = list(get_person_entity_set(word_list, nertags))
         dependency_tree = arcs_to_dependency_tree(arcs)
 

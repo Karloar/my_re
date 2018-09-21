@@ -2,6 +2,8 @@ import numpy as np
 from functools import cmp_to_key
 import urllib
 import urllib.request as request
+from pyltp import Segmentor, Postagger, Parser, NamedEntityRecognizer
+import os
 
 
 def load_data(file):
@@ -206,7 +208,7 @@ def get_relation_word_top_n(word_list, i_vector, postags, q_set, f_set, n=1):
             continue
         if postags[idx] not in postag_set:
             continue
-        relation_word_list.append(word)
+        relation_word_list.append((word, i))
         if len(relation_word_list) >= n:
             break
     return relation_word_list
@@ -278,3 +280,30 @@ def _get_modifier_set_(word_list, dependency_tree, entity_1, entity_2):
                 temp.add(x)
         modifier_set = modifier_set - temp
     return modifier_set
+
+
+def init_pyltp(model_dir, dict_file=None):
+    '''
+    初始化Pyltp的几个模块
+    :param  model_dir   模型的路径
+    :param  dict_file   分词的外部词典
+    :return segmentor, postagger, parser, ner
+    '''
+    segmentor = Segmentor()
+    postagger = Postagger()
+    parser = Parser()
+    ner = NamedEntityRecognizer()
+    
+    cws_model = os.path.join(model_dir, 'cws.model')
+    pos_model = os.path.join(model_dir, 'pos.model')
+    parser_model = os.path.join(model_dir, 'parser.model')
+    ner_model = os.path.join(model_dir, 'ner.model')
+
+    if dict_file:
+        segmentor.load_with_lexicon(cws_model, dict_file)
+    else:
+        segmentor.load(cws_model)
+    postagger.load(pos_model)
+    ner.load(ner_model)
+    parser.load(parser_model)
+    return segmentor, postagger, parser, ner
