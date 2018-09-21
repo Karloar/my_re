@@ -244,6 +244,16 @@ def get_modifier_set(word_list, dependency_tree, entity_1, entity_2):
     return set_1 | set_2
 
 
+def dependency_tree_to_arr(dependency_tree, n):
+    dependency_arr = []
+    for i in range(n):
+        dependency_arr.append([])
+    for relation, from_idx, to_idx in dependency_tree:
+        if from_idx != 0 and to_idx != 0:
+            dependency_arr[from_idx - 1].append((to_idx - 1, relation))
+    return dependency_arr
+
+
 def _get_modifier_set_(word_list, dependency_tree, entity_1, entity_2):
     '''
     查找实体1的修饰词，且实体2不能在修饰词中。
@@ -256,13 +266,7 @@ def _get_modifier_set_(word_list, dependency_tree, entity_1, entity_2):
     word_list = list(word_list)
     e_index_1 = word_list.index(entity_1)
     e_index_2 = word_list.index(entity_2)
-    dependency_arr = []
-    for i in range(len(word_list)):
-        dependency_arr.append([])
-    for relation, from_idx, to_idx in dependency_tree:
-        if from_idx != 0 and to_idx != 0:
-            dependency_arr[from_idx - 1].append((to_idx - 1, relation))
-
+    dependency_arr = dependency_tree_to_arr(dependency_tree, len(word_list))
     queue = []
     for x in dependency_arr[e_index_1]:
         if x[1].upper() == 'ATT':
