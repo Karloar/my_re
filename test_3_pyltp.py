@@ -51,7 +51,9 @@ if __name__ == '__main__':
                 relation_candidate_list = get_relation_candidate(word_list, i_vector, postags, q_set, f_set)
                 relation_candidate_vector = get_relation_candidate_vector(relation_candidate_list, wiki_model)
                 ap = AffinityPropagation().fit(relation_candidate_vector)
-                print(ap.labels_)
-
+                print(q_set[0], f_set[0])
+                for (word, i_val), label in zip(relation_candidate_list, ap.labels_):
+                    print(word, i_val, label)
+                print('---------------------')
                 # print(relation_candidate_vector)
                 # print(q_set[0], f_set[0], relation_word)

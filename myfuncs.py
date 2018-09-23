@@ -200,7 +200,6 @@ def get_relation_candidate(word_list, i_vector, postags, q_set, f_set):
     :param  postags     词性列表
     :param  q_set
     :param  f_set
-    :param  n           最多返回n个, 默认是1个
     :return relation_candidate_list  关系词列表
     '''
     sorted_word_i_list = get_sorted_word_I_list(word_list, i_vector)
