@@ -314,6 +314,12 @@ def init_pyltp(model_dir, dict_file=None):
 
 
 def get_relation_candidate_vector(relation_candidate_list, word2vec_model):
+    '''
+    得到候选关系词语的词向量
+    :param  relation_candidate_list 关系候选词语列表[(word, i_val)]
+    :param  word2vec_model  训练好的word2vec模型
+    :return 候选关系词语向量 n * 100
+    '''
     word_vec = []
     for word, _ in relation_candidate_list:
         if word in word2vec_model:
@@ -321,3 +327,27 @@ def get_relation_candidate_vector(relation_candidate_list, word2vec_model):
         else:
             word_vec.append([0] * 100)
     return np.array(word_vec)
+
+
+def get_relation_by_ap_cluster(relation_candidate_list, labels):
+    '''
+    通过AP聚类的结果得到关系表示词语
+    :param relation_candidate_list  关系候选词语列表[(word, i_val)]
+    :param  labels  聚类结果
+    :return 关系表示词语(word, i_val)
+    '''
+    num_cluster = np.max(labels) + 1
+    cluster = []
+    for _ in range(num_cluster):
+        cluster.append([])
+    for (word, i_val), label in zip(relation_candidate_list, labels):
+        cluster[label].append((word, i_val))
+    return _get_relation_by_cluster_(cluster)
+
+
+def _get_relation_by_cluster_(cluster):
+    cluster_i_val = []
+    for c in cluster:
+        cluster_i_val.append(sum([x[1] for x in c]) / len(c))
+    max_c_idx = np.argmax(cluster_i_val)
+    return max(cluster[max_c_idx], key=lambda x: x[1])
