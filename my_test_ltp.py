@@ -1,7 +1,7 @@
-from myfuncs import get_content_from_ltp
-from myfuncs import page_rank, get_I_vector
-from myfuncs import arcs_to_dependency_tree, get_sorted_word_I_list
-from myfuncs import get_person_entity_set
+from wl.myfuncs import get_content_from_ltp
+from wl.myfuncs import page_rank, get_I_vector
+from wl import arcs_to_dependency_tree, get_sorted_word_I_list
+from wl import get_person_entity_set
 from pyltp import Segmentor, NamedEntityRecognizer, Parser, Postagger
 import os
 import platform

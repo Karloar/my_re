@@ -1,7 +1,7 @@
-from myfuncs import page_rank, get_I_vector, get_relation_candidate
-from myfuncs import arcs_to_dependency_tree, init_pyltp
-from myfuncs import get_person_entity_set, get_modifier_set
-from myfuncs import get_relation_candidate_vector, get_relation_by_ap_cluster
+from wl import page_rank, get_I_vector, get_relation_candidate
+from wl import arcs_to_dependency_tree, init_pyltp
+from wl import get_person_entity_set, get_modifier_set
+from wl import get_relation_candidate_vector, get_relation_by_ap_cluster
 import os
 import platform
 from gensim.models import Word2Vec
@@ -54,8 +54,8 @@ if __name__ == '__main__':
                 print(q_set[0], f_set[0])
                 relation = get_relation_by_ap_cluster(relation_candidate_list, ap.labels_)
                 print(relation)
-                # for (word, i_val), label in zip(relation_candidate_list, ap.labels_):
-                #     print(word, i_val, label)
+                for (word, i_val), label in zip(relation_candidate_list, ap.labels_):
+                    print(word, i_val, label)
                 print('---------------------')
                 # print(relation_candidate_vector)
                 # print(q_set[0], f_set[0], relation_word)
