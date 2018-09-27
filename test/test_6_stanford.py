@@ -1,7 +1,7 @@
 from stanfordcorenlp import StanfordCoreNLP
-from wl.myfuncs import page_rank, get_I_vector
-from wl import get_sorted_word_I_list
-from wl import get_person_entity_set, get_modifier_set
+from myfuncs import page_rank, get_I_vector
+from myfuncs import get_sorted_word_I_list
+from myfuncs import get_person_entity_set, get_modifier_set
 
 
 if __name__ == '__main__':

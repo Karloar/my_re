@@ -154,6 +154,22 @@ def get_I_vector(q_pi_vector, f_pi_vector):
     return f_pi_vector + f_pi_vector * q_pi_vector + q_pi_vector
 
 
+def get_I_vector_by_qfset(q_set, f_set, word_list, dependency_tree, max_iter=5000, error=1e-5, beta=0.3):
+    '''
+    根据q_set和f_set直接计算I(v|{Q, F})
+    :param  q_set
+    :param  f_set
+    :param  word_list
+    :param  max_iter = 5000
+    :param  error = 1e-5
+    :param  beta = 0.3
+    '''
+    q_i_vector = page_rank(q_set, word_list, dependency_tree, max_iter, error, beta)
+    f_i_vector = page_rank(f_set, word_list, dependency_tree, max_iter, error, beta)
+    return get_I_vector(q_i_vector, f_i_vector)
+
+
+
 def get_sorted_word_I_list(word_list, i_vector):
     '''
     将词语与对应的I值从大到小排序，返回(词语，I值)列表
