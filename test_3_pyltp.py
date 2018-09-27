@@ -1,19 +1,17 @@
-from wl import page_rank, get_I_vector, get_relation_candidate
-from wl import arcs_to_dependency_tree, init_pyltp
+from wl import page_rank, get_I_vector, get_trigger_candidate
+from wl import arcs_to_dependency_tree, init_pyltp, get_resource_path
 from wl import get_person_entity_set, get_modifier_set
-from wl import get_relation_candidate_vector, get_relation_by_ap_cluster
+from wl import get_trigger_candidate_vector, get_trigger_by_ap_cluster
 import os
 import platform
 from gensim.models import Word2Vec
 from sklearn.cluster import AffinityPropagation
 
-
-cwd = os.getcwd()
 model_dir = '/Users/karloar/Documents/other/ltp_data_v3.4.0'
 if platform.system() == 'Windows':
     model_dir = r'E:\ltp_data'
 
-dict_file = os.path.join(cwd, 'dict.txt')
+dict_file = get_resource_path('data/dict.txt')
 wiki_model_file = os.path.join(model_dir, 'wiki_model')
 
 
@@ -48,14 +46,14 @@ if __name__ == '__main__':
                 f_pi_vector = page_rank(f_set, word_list, dependency_tree)
                 i_vector = get_I_vector(q_pi_vector, f_pi_vector)
 
-                relation_candidate_list = get_relation_candidate(word_list, i_vector, postags, q_set, f_set)
-                relation_candidate_vector = get_relation_candidate_vector(relation_candidate_list, wiki_model)
-                ap = AffinityPropagation().fit(relation_candidate_vector)
+                trigger_candidate_list = get_trigger_candidate(word_list, i_vector, postags, q_set, f_set)
+                trigger_candidate_vector = get_trigger_candidate_vector(trigger_candidate_list, wiki_model)
+                ap = AffinityPropagation().fit(trigger_candidate_vector)
                 print(q_set[0], f_set[0])
-                relation = get_relation_by_ap_cluster(relation_candidate_list, ap.labels_)
-                print(relation)
-                for (word, i_val), label in zip(relation_candidate_list, ap.labels_):
+                trigger = get_trigger_by_ap_cluster(trigger_candidate_list, ap.labels_)
+                print(trigger)
+                for (word, i_val), label in zip(trigger_candidate_list, ap.labels_):
                     print(word, i_val, label)
                 print('---------------------')
-                # print(relation_candidate_vector)
-                # print(q_set[0], f_set[0], relation_word)
+                # print(trigger_candidate_vector)
+ 

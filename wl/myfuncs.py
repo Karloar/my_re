@@ -192,26 +192,29 @@ def get_person_entity_set(word_list, nertags):
     return person_entity
 
 
-def get_relation_candidate(word_list, i_vector, postags, q_set, f_set):
+def get_trigger_candidate(word_list, i_vector, postags, q_set, f_set, lang='zh'):
     '''
-    返回代表关系的候选词语
+    返回代表关系trigger的候选词语
     :param  word_list   分词后的词列表
     :param  i_vector    计算出的I 向量
     :param  postags     词性列表
     :param  q_set
     :param  f_set
-    :return relation_candidate_list  关系词列表
+    :return relation_trigger_list  关系trigger词列表 (word, idx)
     '''
     sorted_word_i_list = get_sorted_word_I_list(word_list, i_vector)
     postag_set = {'n', 'v', 'a'}
-    relation_candidate_list = list()
+    stanford_postag_set = {'NN', 'NR', 'NT', 'VB', 'VA', 'VC', 'VE', 'VV'}
+    relation_trigger_list = list()
     for word, i, idx in sorted_word_i_list:
         if word in q_set or word in f_set:
             continue
-        if postags[idx] not in postag_set:
+        if lang == 'zh' and postags[idx].lower() not in postag_set:
             continue
-        relation_candidate_list.append((word, i))
-    return relation_candidate_list
+        if lang == 'en' and len(postags[idx]) > 2 and postags[idx][:2].upper() not in stanford_postag_set:
+            continue
+        relation_trigger_list.append((word, i))
+    return relation_trigger_list
 
 
 def get_content_from_ltp(sentence, pattern):
@@ -313,15 +316,15 @@ def init_pyltp(model_dir, dict_file=None):
     return segmentor, postagger, parser, ner
 
 
-def get_relation_candidate_vector(relation_candidate_list, word2vec_model):
+def get_trigger_candidate_vector(relation_trigger_list, word2vec_model):
     '''
     得到候选关系词语的词向量
-    :param  relation_candidate_list 关系候选词语列表[(word, i_val)]
+    :param  relation_trigger_list 关系候选词语列表[(word, i_val)]
     :param  word2vec_model  训练好的word2vec模型
     :return 候选关系词语向量 n * 100
     '''
     word_vec = []
-    for word, _ in relation_candidate_list:
+    for word, _ in relation_trigger_list:
         if word in word2vec_model:
             word_vec.append(word2vec_model[word])
         else:
@@ -329,25 +332,37 @@ def get_relation_candidate_vector(relation_candidate_list, word2vec_model):
     return np.array(word_vec)
 
 
-def get_relation_by_ap_cluster(relation_candidate_list, labels):
+def get_trigger_by_ap_cluster(relation_trigger_list, labels):
     '''
-    通过AP聚类的结果得到关系表示词语
-    :param relation_candidate_list  关系候选词语列表[(word, i_val)]
+    通过AP聚类的结果得到关系trigger表示词语
+    :param relation_trigger_list  关系候trigger选词语列表[(word, i_val)]
     :param  labels  聚类结果
-    :return 关系表示词语(word, i_val)
+    :return 关系trigger表示词语(word, i_val)
     '''
     num_cluster = np.max(labels) + 1
     cluster = []
     for _ in range(num_cluster):
         cluster.append([])
-    for (word, i_val), label in zip(relation_candidate_list, labels):
+    for (word, i_val), label in zip(relation_trigger_list, labels):
         cluster[label].append((word, i_val))
-    return _get_relation_by_cluster_(cluster)
+    return _get_trigger_by_cluster_(cluster)
 
 
-def _get_relation_by_cluster_(cluster):
+def _get_trigger_by_cluster_(cluster):
     cluster_i_val = []
     for c in cluster:
         cluster_i_val.append(sum([x[1] for x in c]) / len(c))
     max_c_idx = np.argmax(cluster_i_val)
     return max(cluster[max_c_idx], key=lambda x: x[1])
+
+
+def get_resource_path(file):
+    f = os.path.dirname(__file__)
+    p = os.path.join(f, file)
+    while not os.path.exists(p):
+        f_new = os.path.dirname(f)
+        if f_new == f:
+            raise Exception("file not exist!")
+        p = os.path.join(f_new, file)
+        f = f_new
+    return p

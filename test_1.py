@@ -3,7 +3,8 @@ import os
 import logging
 import numpy as np
 import platform
-from myfuncs import get_sorted_word_I_list
+from wl import get_sorted_word_I_list
+from wl import get_trigger_candidate
 
 
 cwd = os.getcwd()
@@ -128,23 +129,30 @@ def get_I_vector(q_pi_vector, f_pi_vector):
 if __name__ == '__main__':
     # sentence_list, entity_relation = load_data(data_file)
     # sentence_list = ['新加坡《联合早报》曝出了赵薇与上海知名人士张三的儿子汪道涵热恋。']
-    sentence_list = ['EllenGriffinDunne, from whom DominickDunne was divorced in 1965, died in 1997.']
+    sentence_list = ['The surgeon cuts a small hole in the skull and lifts the edge of the brain to expose the nerve.']
     with StanfordCoreNLP(stanfordcorepath, lang='en', logging_level=None) as stanford:
         for sentence in sentence_list:
             dependency_tree = stanford.dependency_parse(sentence)
-            print(dependency_tree)
+            postags_tuple = stanford.pos_tag(sentence)
+            postags = [x[1] for x in postags_tuple]
             word_list = stanford.word_tokenize(sentence)
+            print(word_list)
+            print(postags)
+            print(dependency_tree)
             # ner = stanford.ner(sentence)
             # print(ner)
-            q_set = ['DominickDunne']
-            f_set = ['EllenGriffinDunne']
+            q_set = ['surgeon']
+            f_set = ['hole']
             pr_vector = get_PR_vector(q_set, word_list)
             a_matrix = get_A_Matrix(word_list, dependency_tree)
             q_pi_vector = page_rank(q_set, word_list, dependency_tree)
             f_pi_vecgor = page_rank(f_set, word_list, dependency_tree)
             i_vector = get_I_vector(q_pi_vector, f_pi_vecgor)
-
-            for word, i, _ in get_sorted_word_I_list(word_list, i_vector):
-                print(word, i)
+            relation_trigger = get_trigger_candidate(word_list, i_vector, postags, q_set, f_set, lang='en')
+            print(relation_trigger)
+            for word, idx in relation_trigger:
+                print(word, idx)
+            # for word, i, _ in get_sorted_word_I_list(word_list, i_vector):
+            #     print(word, i)
             
 
