@@ -48,13 +48,9 @@ if __name__ == '__main__':
                 i_vector = get_I_vector(q_pi_vector, f_pi_vector)
 
                 trigger_candidate_list = get_trigger_candidate(word_list, i_vector, postags, q_set, f_set)
-                trigger_candidate_vector = get_trigger_candidate_vector(trigger_candidate_list, wiki_model)
-                ap = AffinityPropagation().fit(trigger_candidate_vector)
+                # trigger_candidate_vector = get_trigger_candidate_vector(trigger_candidate_list, wiki_model)
                 print(word_list[q_set[0]], word_list[f_set[0]])
-                trigger = get_trigger_by_ap_cluster(trigger_candidate_list, ap.labels_)
+                trigger = get_trigger_by_ap_cluster(trigger_candidate_list, i_vector)
                 print(trigger)
-                for (word, i_val), label in zip(trigger_candidate_list, ap.labels_):
-                    print(word, i_val, label)
-                print('---------------------')
                 # print(trigger_candidate_vector)
  

@@ -4,6 +4,7 @@ import urllib
 import urllib.request as request
 from pyltp import Segmentor, Postagger, Parser, NamedEntityRecognizer
 import os
+from sklearn.cluster import AffinityPropagation
 
 
 def load_data(file):
@@ -208,7 +209,7 @@ def get_person_entity_set(word_list, nertags):
     return person_entity
 
 
-def get_trigger_candidate(word_list, i_vector, postags, q_set, f_set, lang='zh'):
+def get_trigger_candidate(word_list, i_vector, postags, q_set, f_set, style='pyltp'):
     '''
     返回代表关系trigger的候选词语
     :param  word_list   分词后的词列表
@@ -216,20 +217,28 @@ def get_trigger_candidate(word_list, i_vector, postags, q_set, f_set, lang='zh')
     :param  postags     词性列表
     :param  q_set
     :param  f_set
-    :return relation_trigger_list  关系trigger词列表 (word, idx)
+    :param  style       词性标注的工具，默认是pyltp，可选：stanfordcorenlp
+    :return relation_trigger_list  关系trigger词列表 (word, i_val, idx)
     '''
     sorted_word_i_list = get_sorted_word_I_list(word_list, i_vector)
-    postag_set = {'n', 'v', 'a'}
-    stanford_postag_set = {'NN', 'NR', 'NT', 'VB', 'VA', 'VC', 'VE', 'VV'}
+    pyltp_postag_set = {'N', 'V', 'A'}
+    stanford_postag_set = {
+        'NN', 'NNS', 'NNP', 'NNPS',
+        'RB', 'RBR', 'RBS',
+        'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ',
+        'JJ', 'JJR', 'JJS',
+        'IN'
+    }
+    postag_set = pyltp_postag_set
+    if style == 'stanfordcorenlp':
+        postag_set = stanford_postag_set
     relation_trigger_list = list()
-    for word, i, idx in sorted_word_i_list:
-        if word in q_set or word in f_set:
+    for word, i_val, idx in sorted_word_i_list:
+        if idx in q_set or idx in f_set:
             continue
-        if lang == 'zh' and postags[idx].lower() not in postag_set:
+        if postags[idx].upper() not in postag_set:
             continue
-        if lang == 'en' and len(postags[idx]) > 2 and postags[idx][:2].upper() not in stanford_postag_set:
-            continue
-        relation_trigger_list.append((word, i))
+        relation_trigger_list.append((word, i_val, idx))
     return relation_trigger_list
 
 
@@ -246,7 +255,7 @@ def get_content_from_ltp(sentence, pattern):
     return content
 
 
-
+# 这个函数需要重新写
 def get_modifier_set(word_list, dependency_tree, entity_1, entity_2):
     '''
     得到实体1和实体2的修饰词集合
@@ -271,6 +280,7 @@ def dependency_tree_to_arr(dependency_tree, n):
     return dependency_arr
 
 
+# 这个函数也需要重新写
 def _get_modifier_set_(word_list, dependency_tree, entity_1, entity_2):
     '''
     查找实体1的修饰词，且实体2不能在修饰词中。
@@ -341,7 +351,7 @@ def get_trigger_candidate_vector(relation_trigger_list, word2vec_model):
     :return 候选关系词语向量 n * 100
     '''
     word_vec = []
-    for word, _ in relation_trigger_list:
+    for word, _, _ in relation_trigger_list:
         if word in word2vec_model:
             word_vec.append(word2vec_model[word])
         else:
@@ -349,27 +359,34 @@ def get_trigger_candidate_vector(relation_trigger_list, word2vec_model):
     return np.array(word_vec)
 
 
-def get_trigger_by_ap_cluster(relation_trigger_list, labels):
+def get_trigger_by_ap_cluster(trigger_candidate, i_vector):
     '''
     通过AP聚类的结果得到关系trigger表示词语
-    :param relation_trigger_list  关系候trigger选词语列表[(word, i_val)]
-    :param  labels  聚类结果
-    :return 关系trigger表示词语(word, i_val)
+    :param  trigger_candidate  关系候trigger选词语列表[(word, i_val, idx)]
+    :param  i_vector  I向量
+    :return 关系trigger表示词语(word, i_val, idx)
     '''
-    num_cluster = np.max(labels) + 1
-    cluster = []
-    for _ in range(num_cluster):
-        cluster.append([])
-    for (word, i_val), label in zip(relation_trigger_list, labels):
-        cluster[label].append((word, i_val))
+    if len(trigger_candidate) == 1:
+        return trigger_candidate[0]
+    trigger_i_vector = [i_vector[idx] for _, _, idx in trigger_candidate]
+    ap = AffinityPropagation().fit(trigger_i_vector)
+    cluster = dict()
+    for (word, i_val, idx), label in zip(trigger_candidate, ap.labels_):
+        c = cluster.get(label, [])
+        c.append((word, i_val, idx))
+        cluster[label] = c
     return _get_trigger_by_cluster_(cluster)
 
 
 def _get_trigger_by_cluster_(cluster):
-    cluster_i_val = []
-    for c in cluster:
-        cluster_i_val.append(sum([x[1] for x in c]) / len(c))
-    max_c_idx = np.argmax(cluster_i_val)
+    cluster_i_val = dict()
+    for c in cluster.keys():
+        cluster_i_val[c] = (sum([x[1] for x in cluster[c]]) / len(cluster[c]))
+    max_c_idx = list(cluster_i_val.keys())[0]
+    max_val = cluster_i_val[max_c_idx]
+    for c, val in cluster_i_val.items():
+        if val > max_val:
+            max_c_idx = c
     return max(cluster[max_c_idx], key=lambda x: x[1])
 
 
