@@ -1,6 +1,7 @@
 from myfuncs import get_resource_path
 from myfuncs import get_I_vector_by_qfset
 from myfuncs import get_trigger_candidate
+from myfuncs import get_qfset
 import re
 from stanfordcorenlp import StanfordCoreNLP
 
@@ -30,12 +31,15 @@ def load_data(data_file):
 if __name__ == '__main__':
     sentences, entity_relation_list = load_data(data_file)
     with StanfordCoreNLP('http://localhost', port=9000, lang='en') as nlp:
-        for sent, entity_relation in zip(sentences, entity_relation_list):
-            word_list = nlp.word_tokenize(sent)
-            dependency_tree = nlp.dependency_parse(sent)
-            postags = nlp.pos_tag(sent)
-            q1_set = entity_relation[0].split()
-            q2_set = entity_relation[2].split()
-            i_vector = get_I_vector_by_qfset(q1_set, q2_set, word_list, dependency_tree)
-            trigger_candidate = get_trigger_candidate(word_list, i_vector, postags, q1_set, q2_set, lang='en')
-            print(trigger_candidate)
+        # for sent, entity_relation in zip(sentences, entity_relation_list):
+        #     word_list = nlp.word_tokenize(sent)
+        #     dependency_tree = nlp.dependency_parse(sent)
+        #     postags = nlp.pos_tag(sent)
+        # q1_set = get_qfset(entity_relation[0], word_list)
+        # q2_set = get_qfset(entity_relation[2], word_list)
+        #     i_vector = get_I_vector_by_qfset(q1_set, q2_set, word_list, dependency_tree)
+        #     trigger_candidate = get_trigger_candidate(word_list, i_vector, postags, q1_set, q2_set, lang='en')
+        #     print(trigger_candidate)
+        sent = 'Ellen Griffin Dunne, from whom he was divorced in 1965, died in 1997.'
+        coref = nlp.coref(sent)
+        print(coref)

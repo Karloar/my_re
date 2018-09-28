@@ -1,7 +1,8 @@
-from wl import page_rank, get_I_vector, get_trigger_candidate
-from wl import arcs_to_dependency_tree, init_pyltp, get_resource_path
-from wl import get_person_entity_set, get_modifier_set
-from wl import get_trigger_candidate_vector, get_trigger_by_ap_cluster
+from myfuncs import page_rank, get_I_vector, get_trigger_candidate
+from myfuncs import arcs_to_dependency_tree, init_pyltp, get_resource_path
+from myfuncs import get_person_entity_set, get_modifier_set
+from myfuncs import get_trigger_candidate_vector, get_trigger_by_ap_cluster
+from myfuncs import get_qfset
 import os
 import platform
 from gensim.models import Word2Vec
@@ -27,7 +28,7 @@ if __name__ == '__main__':
         '吴奇隆与刘诗诗去年领证，婚礼筹备了1年'
     ]
     for sentence in sentence_list:
-        word_list = segmentor.segment(sentence)
+        word_list = list(segmentor.segment(sentence))
         postags = postagger.postag(word_list)
         arcs = parser.parse(word_list, postags)
         nertags = ner.recognize(word_list, postags)
@@ -37,10 +38,10 @@ if __name__ == '__main__':
 
         for i in range(len(person_entity_list)):
             for j in range(i+1, len(person_entity_list)):
-                q_set = [person_entity_list[i]]
-                f_set = [person_entity_list[j]]
+                q_set = get_qfset(person_entity_list[i], word_list)
+                f_set = get_qfset(person_entity_list[j], word_list)
 
-                modifier_set = get_modifier_set(word_list, dependency_tree, q_set[0], f_set[0])
+                modifier_set = get_modifier_set(word_list, dependency_tree, word_list[q_set[0]], word_list[f_set[0]])
 
                 q_pi_vector = page_rank(q_set, word_list, dependency_tree)
                 f_pi_vector = page_rank(f_set, word_list, dependency_tree)
@@ -49,7 +50,7 @@ if __name__ == '__main__':
                 trigger_candidate_list = get_trigger_candidate(word_list, i_vector, postags, q_set, f_set)
                 trigger_candidate_vector = get_trigger_candidate_vector(trigger_candidate_list, wiki_model)
                 ap = AffinityPropagation().fit(trigger_candidate_vector)
-                print(q_set[0], f_set[0])
+                print(word_list[q_set[0]], word_list[f_set[0]])
                 trigger = get_trigger_by_ap_cluster(trigger_candidate_list, ap.labels_)
                 print(trigger)
                 for (word, i_val), label in zip(trigger_candidate_list, ap.labels_):

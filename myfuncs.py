@@ -31,7 +31,7 @@ def get_PR_vector(r_set, word_list):
     r_set_len = len(r_set)
     pr = np.zeros((word_list_len, 1))
     for i in range(word_list_len):
-        if word_list[i] in r_set:
+        if i in r_set:
             pr[i, 0] = 1 / r_set_len
     return pr
 
@@ -246,6 +246,7 @@ def get_content_from_ltp(sentence, pattern):
     return content
 
 
+
 def get_modifier_set(word_list, dependency_tree, entity_1, entity_2):
     '''
     得到实体1和实体2的修饰词集合
@@ -382,3 +383,20 @@ def get_resource_path(file):
         p = os.path.join(f_new, file)
         f = f_new
     return p
+
+
+def get_indexes(element, collection):
+    '''
+    返回集合中所有元素的索引值
+    '''
+    return [idx for idx, x in zip(range(len(collection)), collection) if x == element]
+
+
+def get_qfset(entity, word_list):
+    '''
+    根据实体以及词列表，返回qfset
+    '''
+    qf_set = []
+    for x in entity.split():
+        qf_set.extend(get_indexes(x, word_list))
+    return qf_set
