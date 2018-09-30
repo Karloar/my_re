@@ -25,6 +25,8 @@ def load_data(data_file):
             sent = sent.replace('<e2>', '')
             sent = sent.replace('</e2>', '')
             relation = lines[i+1].strip()
+            if len(re.findall(r'(\(e1,e2\)|\(e2,e1\))', relation)) > 0:
+                relation = relation[:-7]
             sent_list.append(sent.strip()[1:-1])
             entity_relation_list.append((e1, relation, e2))
     return sent_list, entity_relation_list
@@ -32,6 +34,8 @@ def load_data(data_file):
 
 if __name__ == '__main__':
     sentences, entity_relation_list = load_data(data_file)
+    relation_trigger_dict = dict()
+
     with StanfordCoreNLP('http://localhost', port=9000, lang='en') as nlp:
         for sent, entity_relation in zip(sentences, entity_relation_list):
             word_list = nlp.word_tokenize(sent)
@@ -44,4 +48,9 @@ if __name__ == '__main__':
             labels = ap.labels_
             trigger_candidate = get_trigger_candidate(word_list, i_vector, postags, q1_set, q2_set, style='stanfordcorenlp')
             trigger = get_trigger_by_ap_cluster(trigger_candidate, i_vector)
-            print(trigger)
+            relation_set = relation_trigger_dict.get(trigger[0], set())
+            relation_set.add(entity_relation[1])
+            relation_trigger_dict[trigger[0]] = relation_set
+    print('-------------------------')
+    for k, v in relation_trigger_dict.items():
+        print(k, '-----', v)
