@@ -450,9 +450,9 @@ def print_running_time(func):
     '''
     在程序运行结束后显示运行时间，用@print_running_time修饰在函数上。
     '''
-    def _func():
+    def _func(*args, **kargs):
         start_time = time()
-        return_val = func()
+        return_val = func(*args, **kargs)
         end_time = time()
         print("程序运行时间：{:f} 秒。".format(end_time - start_time))
         return return_val
