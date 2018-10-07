@@ -3,7 +3,8 @@ from myfuncs import get_I_vector_by_qfset
 from myfuncs import get_trigger_candidate
 from myfuncs import get_qfset
 from myfuncs import get_trigger_by_ap_cluster
-import re
+from myfuncs import load_data_en
+from myfuncs import print_running_time
 from stanfordcorenlp import StanfordCoreNLP
 from sklearn.cluster import AffinityPropagation
 
@@ -11,29 +12,9 @@ from sklearn.cluster import AffinityPropagation
 data_file = get_resource_path('data/TRAIN_FILE.TXT')
 
 
-def load_data(data_file):
-    sent_list = []
-    entity_relation_list = []
-    with open(data_file, 'r') as f:
-        lines = f.readlines()
-        for i in range(0, len(lines), 4):
-            _, sent = lines[i].split('\t')
-            e1 = re.findall(r'<e1>[\s\S]+</e1>', sent)[0][4:-5]
-            e2 = re.findall(r'<e2>[\s\S]+</e2>', sent)[0][4:-5]
-            sent = sent.replace('<e1>', '')
-            sent = sent.replace('</e1>', '')
-            sent = sent.replace('<e2>', '')
-            sent = sent.replace('</e2>', '')
-            relation = lines[i+1].strip()
-            if len(re.findall(r'(\(e1,e2\)|\(e2,e1\))', relation)) > 0:
-                relation = relation[:-7]
-            sent_list.append(sent.strip()[1:-1])
-            entity_relation_list.append((e1, relation, e2))
-    return sent_list, entity_relation_list
-
-
-if __name__ == '__main__':
-    sentences, entity_relation_list = load_data(data_file)
+@print_running_time
+def main():
+    sentences, entity_relation_list = load_data_en(data_file)
     relation_trigger_dict = dict()
 
     with StanfordCoreNLP('http://localhost', port=9000, lang='en') as nlp:
@@ -54,3 +35,8 @@ if __name__ == '__main__':
     print('-------------------------')
     for k, v in relation_trigger_dict.items():
         print(k, '-----', v)
+
+
+if __name__ == '__main__':
+    main()
+    

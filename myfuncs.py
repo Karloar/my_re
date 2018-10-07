@@ -5,9 +5,11 @@ import urllib.request as request
 from pyltp import Segmentor, Postagger, Parser, NamedEntityRecognizer
 import os
 from sklearn.cluster import AffinityPropagation
+import re
+from time import time
 
 
-def load_data(file):
+def load_data_zh(file):
     sentence_list = []
     entity_relation = []
     with open(file, 'r', encoding='utf-8') as f:
@@ -19,6 +21,31 @@ def load_data(file):
             elif len(x) == 1:
                 sentence_list.append(x[-1])
     return sentence_list, entity_relation
+
+
+def load_data_en(data_file):
+    '''
+    加载英文数据, 返回句子列表以及(实体1, 关系, 实体2)列表。
+    :return sent_list, entity_relation_list
+    '''
+    sent_list = []
+    entity_relation_list = []
+    with open(data_file, 'r') as f:
+        lines = f.readlines()
+        for i in range(0, len(lines), 4):
+            _, sent = lines[i].split('\t')
+            e1 = re.findall(r'<e1>[\s\S]+</e1>', sent)[0][4:-5]
+            e2 = re.findall(r'<e2>[\s\S]+</e2>', sent)[0][4:-5]
+            sent = sent.replace('<e1>', '')
+            sent = sent.replace('</e1>', '')
+            sent = sent.replace('<e2>', '')
+            sent = sent.replace('</e2>', '')
+            relation = lines[i+1].strip()
+            if len(re.findall(r'(\(e1,e2\)|\(e2,e1\))', relation)) > 0:
+                relation = relation[:-7]
+            sent_list.append(sent.strip()[1:-1])
+            entity_relation_list.append((e1, relation, e2))
+    return sent_list, entity_relation_list
 
 
 def get_PR_vector(r_set, word_list):
@@ -417,3 +444,16 @@ def get_qfset(entity, word_list):
     for x in entity.split():
         qf_set.extend(get_indexes(x, word_list))
     return qf_set
+
+
+def print_running_time(func):
+    '''
+    在程序运行结束后显示运行时间，用@print_running_time修饰在函数上。
+    '''
+    def _func():
+        start_time = time()
+        return_val = func()
+        end_time = time()
+        print("程序运行时间：{:f} 秒。".format(end_time - start_time))
+        return return_val
+    return _func
