@@ -3,6 +3,7 @@ from myfuncs import arcs_to_dependency_tree, init_pyltp, get_resource_path
 from myfuncs import get_person_entity_set, get_modifier_set
 from myfuncs import get_trigger_candidate_vector, get_trigger_by_ap_cluster
 from myfuncs import get_qfset
+from myfuncs import print_running_time
 import os
 import platform
 from gensim.models import Word2Vec
@@ -16,8 +17,8 @@ dict_file = get_resource_path('data/dict.txt')
 wiki_model_file = os.path.join(model_dir, 'wiki_model')
 
 
-if __name__ == '__main__':
-
+@print_running_time
+def main():
     segmentor, postagger, parser, ner = init_pyltp(model_dir, dict_file)
     wiki_model = Word2Vec.load(wiki_model_file)
     sentence_list = [
@@ -54,3 +55,7 @@ if __name__ == '__main__':
                 print(trigger)
                 # print(trigger_candidate_vector)
  
+
+if __name__ == '__main__':
+
+    main()
