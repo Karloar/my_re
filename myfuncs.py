@@ -446,14 +446,32 @@ def get_qfset(entity, word_list):
     return qf_set
 
 
-def print_running_time(func):
+def print_running_time(*args, **kargs):
     '''
     在程序运行结束后显示运行时间，用@print_running_time修饰在函数上。
+    可选参数：
+    :param  show_func_name  True / False
     '''
-    def _func(*args, **kargs):
-        start_time = time()
-        return_val = func(*args, **kargs)
-        end_time = time()
-        print("程序运行时间：{:f} 秒。".format(end_time - start_time))
-        return return_val
-    return _func
+    if len(args) == 1 and len(kargs) == 0:
+        def _func(*fcargs, **fckargs):
+            start_time = time()
+            func = args[0]
+            return_val = func(*fcargs, **fckargs)
+            end_time = time()
+            print("程序运行时间：{:f} 秒。".format(end_time - start_time))
+            return return_val
+        return _func
+
+    if len(args) == 0 and len(kargs) != 0:
+        def _func(func):
+            def __func(*fcargs, **fckargs):
+                start_time = time()
+                return_val = func(*fcargs, **fckargs)
+                end_time = time()
+                func_name = '程序'
+                if 'show_func_name' in kargs and kargs['show_func_name']:
+                    func_name = "函数 " + func.__name__ + " "
+                print("{:s}运行时间：{:f} 秒。".format(func_name, end_time - start_time))
+                return return_val
+            return __func
+        return _func
