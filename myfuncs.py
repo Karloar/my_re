@@ -7,6 +7,8 @@ import os
 from sklearn.cluster import AffinityPropagation
 import re
 from time import time
+from stanfordcorenlp import StanfordCoreNLP
+import pickle as pkl
 
 
 def load_data_zh(file):
@@ -451,27 +453,196 @@ def print_running_time(*args, **kargs):
     在程序运行结束后显示运行时间，用@print_running_time修饰在函数上。
     可选参数：
     :param  show_func_name  True / False
+    :param  message     自定义输出信息，在需要输出时间的地方用{:f},
     '''
     if len(args) == 1 and len(kargs) == 0:
         def _func(*fcargs, **fckargs):
-            start_time = time()
+            tic = time()
             func = args[0]
             return_val = func(*fcargs, **fckargs)
-            end_time = time()
-            print("程序运行时间：{:f} 秒。".format(end_time - start_time))
+            toc = time()
+            print("程序运行时间：{:f} 秒。".format(toc - tic))
             return return_val
         return _func
 
     if len(args) == 0 and len(kargs) != 0:
         def _func(func):
             def __func(*fcargs, **fckargs):
-                start_time = time()
+                tic = time()
                 return_val = func(*fcargs, **fckargs)
-                end_time = time()
+                toc = time()
                 func_name = '程序'
-                if 'show_func_name' in kargs and kargs['show_func_name']:
-                    func_name = "函数 " + func.__name__ + " "
-                print("{:s}运行时间：{:f} 秒。".format(func_name, end_time - start_time))
+                if "message" in kargs:
+                    print(kargs["message"].format(toc - tic))
+                else:
+                    if 'show_func_name' in kargs and kargs['show_func_name']:
+                        func_name = "函数 " + func.__name__ + " "
+                    print("{:s}运行时间：{:f} 秒。".format(func_name, toc - tic))
                 return return_val
             return __func
         return _func
+
+
+class Param:
+    '''
+    该类用来设定参数
+    '''
+    pass
+
+
+def get_trigger_neighbour_list_from_sents(sents, entity_relation_list, save_file=None, params: Param=None):
+    '''
+    根据句子列表得到trigger周围词语集合，并根据需要保存成文件以免重复计算, 格式[[word1, trigger, word3], [...]]
+    :param  sents                   句子集合
+    :param  entity_relation_list    实体关系集合(实体1, 关系, 实体2), 默认为None   
+    :param  save_file               将最终得到的向量集合保存成文件, 以免重复计算     
+    :param  params  设定参数
+                    style               使用stanfordcorenlp或者pyltp, 默认stanfordcorenlp    
+                    max_iter            PageRank的最大迭代次数, 默认5000
+                    error               PageRank的精确度, 默认1e-5
+                    beta                PageRank的参数beta, 默认0.3
+                    trigger_neighbour   trigger周围的单词数（包括trigger), 默认3
+                    pyltp_model         pyltp模型目录, 默认是None
+                    user_dict           pyltp用于分词的用户词典, 默认是None
+                    
+    :return trigger_vector_list
+    '''
+    # 参数处理
+    style = 'stanfordcorenlp'
+    max_iter = 5000
+    error = 1e-5
+    beta = 0.3
+    trigger_neighbour = 3
+    pyltp_model = None
+    user_dict = None
+    if hasattr(params, 'style'):
+        style = params.style
+    if hasattr(params, 'max_iter'):
+        max_iter = params.max_iter
+    if hasattr(params, 'error'):
+        error = params.error
+    if hasattr(params, 'beta'):
+        beta = params.beta
+    if hasattr(params, 'trigger_neighbour'):
+        trigger_neighbour = params.trigger_neighbour
+    if hasattr(params, 'pyltp_model'):
+        pyltp_model = params.pyltp_model
+    if hasattr(params, 'user_dict'):
+        user_dict = params.user_dict
+
+
+    if save_file and os.path.exists(save_file):
+        return pkl.load(open(save_file, 'rb'))
+    else:
+        # 得到trigger
+        nlp_tool = get_nlp_tool(style, pyltp_model, user_dict)
+        data_list = []
+        for sent, entity_relation in zip(sents, entity_relation_list):
+            word_list, postags, dependency_tree = words_postags_dependency_tree(
+                sent,
+                nlp_tool,
+                style=style
+            )
+            q1_set = get_qfset(entity_relation[0], word_list)
+            q2_set = get_qfset(entity_relation[2], word_list)
+            # 通过PageRank计算I值
+            i_vector = get_I_vector_by_qfset(
+                q1_set,
+                q2_set,
+                word_list,
+                dependency_tree,
+                max_iter=max_iter,
+                beta=beta,
+                error=error
+            )
+            trigger_candidate = get_trigger_candidate(
+                word_list,
+                i_vector,
+                postags,
+                q1_set,
+                q2_set,
+                style
+            )
+            trigger = get_trigger_by_ap_cluster(trigger_candidate, i_vector)
+            trigger_neighbour_words = get_trigger_neighbour_words(trigger, word_list, trigger_neighbour)
+            data_list.append(trigger_neighbour_words)
+        if style == 'stanfordcorenlp':
+            nlp_tool.close()
+        dirname = os.path.dirname(save_file)
+        if save_file:
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
+            pkl.dump(data_list, open(save_file, 'wb'))
+        return data_list
+
+
+def get_trigger_neighbour_vector_list(trigger_neighbour_list, model, vector_size):
+    '''
+    使用word2vec将trigger_neighbour_list中的每个单词转换成向量, 返回的是列表
+    '''
+    trigger_neighbour_vector_list = []
+    for trigger_neighbour in trigger_neighbour_list:
+        trigger_neighbour_vector = []
+        for word in trigger_neighbour:
+            if word in model:
+                trigger_neighbour_vector.append(model[word])
+            else:
+                trigger_neighbour_vector.append(np.zeros((1, vector_size)))
+        trigger_neighbour_vector_list.append(trigger_neighbour_vector)
+    return trigger_neighbour_vector_list
+
+
+def get_feature_vector_for_nn(trigger_neighbour_vector_list, vector_size):
+    '''
+    将trigger_neighbour_vector_list转换成用于神经网络训练的向量
+    '''
+    feature_vector = np.zeros((1, vector_size))
+    for trigger_vector in trigger_neighbour_vector_list[0]:
+        feature_vector += trigger_vector
+    feature_vector /= len(trigger_neighbour_vector_list[0])
+    for i in range(1, len(trigger_neighbour_vector_list)):
+        tv = np.zeros((1, vector_size))
+        for trigger_vector in trigger_neighbour_vector_list[i]:
+            tv += trigger_vector
+        tv /= len(trigger_neighbour_vector_list[i])
+        feature_vector = np.concatenate([feature_vector, tv], axis=0)
+    return feature_vector
+
+
+def get_trigger_neighbour_words(trigger, word_list, trigger_neighbour):
+    n = trigger_neighbour // 2
+    len_word_list = len(word_list)
+    if trigger_neighbour <= len_word_list and trigger_neighbour > 0:
+        if trigger[2] - n >= 0 and trigger[2] + n < len_word_list:
+            return word_list[trigger[2]-n:trigger[2]+n+1]
+        elif trigger[2] - n < 0:
+            return word_list[:trigger_neighbour]
+        elif trigger[2] + n >= len_word_list:
+            return word_list[len_word_list-trigger_neighbour:]
+    return word_list
+
+
+def get_nlp_tool(style, pyltp_model=None, user_dict=None):
+    if style == 'pyltp':
+        if not pyltp_model:
+            raise Exception
+        segmentor, postagger, parser, _ = init_pyltp(pyltp_model, user_dict)
+        return (segmentor, postagger, parser)
+    else:
+        return StanfordCoreNLP('http://localhost', port=9000, lang='en')
+
+
+def words_postags_dependency_tree(sent, nlp_tool, style):
+    if style == 'pyltp':
+        segmentor, postagger, parser = nlp_tool
+        word_list = list(segmentor.segment(sent))
+        postags = list(postagger.postag(word_list))
+        arcs = parser.parse(word_list, postags)
+        dependency_tree = arcs_to_dependency_tree(arcs)
+    else:
+        word_list = nlp_tool.word_tokenize(sent)
+        dependency_tree = nlp_tool.dependency_parse(sent)
+        postags = [x[1] for x in nlp_tool.pos_tag(sent)]
+    return word_list, postags, dependency_tree
+
+
