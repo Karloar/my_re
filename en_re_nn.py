@@ -32,7 +32,7 @@ def main():
 
     # 设置参数
     params = Param()
-    params.trigger_neighbour = 5
+    params.trigger_neighbour = 0
 
     # 处理训练数据
     print('processing train data......')

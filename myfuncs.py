@@ -568,8 +568,8 @@ def get_trigger_neighbour_list_from_sents(sents, entity_relation_list, save_file
             data_list.append(trigger_neighbour_words)
         if style == 'stanfordcorenlp':
             nlp_tool.close()
-        dirname = os.path.dirname(save_file)
         if save_file:
+            dirname = os.path.dirname(save_file)
             if not os.path.exists(dirname):
                 os.makedirs(dirname)
             pkl.dump(data_list, open(save_file, 'wb'))
