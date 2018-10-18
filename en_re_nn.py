@@ -32,7 +32,7 @@ def main():
 
     # 设置参数
     params = Param()
-    params.trigger_neighbour = 0
+    params.trigger_neighbour = 7
 
     # 处理训练数据
     print('processing train data......')
@@ -40,7 +40,7 @@ def main():
     relation_list = list(set(x[1] for x in entity_relation_list))
     trigger_neighbour_list = get_trigger_neighbour_list_from_sents(
         sents, entity_relation_list,
-        # os.path.join(os.getcwd(), train_neighbour_words_pkl),
+        os.path.join(os.getcwd(), train_neighbour_words_pkl),
         params=params
     )
     trigger_neighbour_vector_list = get_trigger_neighbour_vector_list(
@@ -56,7 +56,7 @@ def main():
     sents, entity_relation_list = load_data_en(test_file)
     trigger_neighbour_list = get_trigger_neighbour_list_from_sents(
         sents, entity_relation_list,
-        # os.path.join(os.getcwd(), test_neighbour_words_pkl),
+        os.path.join(os.getcwd(), test_neighbour_words_pkl),
         params=params
     )
     trigger_neighbour_vector_list = get_trigger_neighbour_vector_list(
@@ -68,7 +68,7 @@ def main():
     test_label = np.array([relation_list.index(x[1]) for x in entity_relation_list])
 
     print('classifying......')
-    mlp = MLPClassifier(max_iter=5000, learning_rate_init=0.00001, hidden_layer_sizes=(401, 803), activation='relu')
+    mlp = MLPClassifier(max_iter=5000, learning_rate_init=0.00001, hidden_layer_sizes=(vector_size*2, ), activation='relu')
     mlp.fit(train_data, train_label)
     print(mlp.score(train_data, train_label))
     print(mlp.score(test_data, test_label))

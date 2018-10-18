@@ -9,6 +9,7 @@ import platform
 from gensim.models import Word2Vec
 from sklearn.cluster import AffinityPropagation
 
+
 model_dir = '/Users/karloar/Documents/other/ltp_data_v3.4.0'
 if platform.system() == 'Windows':
     model_dir = r'E:\ltp_data'
