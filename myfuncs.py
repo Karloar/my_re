@@ -606,7 +606,7 @@ def get_feature_vector_for_nn(trigger_neighbour_vector_list, vector_size):
             tv += trigger_vector
         tv /= len(trigger_neighbour_vector_list[i])
         feature_vector = np.concatenate([feature_vector, tv], axis=0)
-    return feature_vector
+    return feature_vector.astype(np.float32)
 
 
 def get_trigger_neighbour_words(trigger, word_list, trigger_neighbour):
@@ -646,3 +646,26 @@ def words_postags_dependency_tree(sent, nlp_tool, style):
     return word_list, postags, dependency_tree
 
 
+def get_batch(data, batch_size, step):
+    '''
+    根据迭代的步骤得到数据batch
+    '''
+    data_num = len(data)
+    batch_num = int(data_num / batch_size + 0.5)
+    from_idx = step % batch_num * batch_size
+    to_idx = min([data_num, from_idx + batch_size])
+    print(from_idx, '---------', to_idx)
+    return data[from_idx:to_idx, :]
+
+
+def get_label_by_entity_relation_list(entity_relation_list: list, relation_list: list):
+    '''
+    根据类别将类别映射成向量
+    '''
+    m = len(entity_relation_list)
+    n = len(relation_list)
+    label = np.zeros((m, n)).astype(np.float32)
+    for i in range(m):
+        idx = relation_list.index(entity_relation_list[i][1])
+        label[i, idx] = 1
+    return label
