@@ -32,7 +32,7 @@ def main():
 
     # 设置参数
     params = Param()
-    params.trigger_neighbour = 13
+    params.trigger_neighbour = 9
 
     # 处理训练数据
     print('processing train data......')
@@ -68,7 +68,7 @@ def main():
     test_label = np.array([relation_list.index(x[1]) for x in entity_relation_list])
 
     print('classifying......')
-    mlp = MLPClassifier(max_iter=5000, learning_rate_init=0.00001, hidden_layer_sizes=(vector_size*2, ), activation='relu')
+    mlp = MLPClassifier(max_iter=5000, learning_rate_init=0.001, hidden_layer_sizes=(vector_size*2, ), activation='relu')
     mlp.fit(train_data, train_label)
     print(mlp.score(train_data, train_label))
     print(mlp.score(test_data, test_label))
