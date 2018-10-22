@@ -1,15 +1,16 @@
+import os
+import platform
+from gensim.models import Word2Vec
+import numpy as np
 from myfuncs import get_trigger_neighbour_list_from_sents
 from myfuncs import get_resource_path
 from myfuncs import load_data_en
 from myfuncs import print_running_time
 from myfuncs import get_trigger_neighbour_vector_list
-from myfuncs import get_feature_vector_for_nn
+from myfuncs import get_feature_vector_for_rnn
 from myfuncs import Param
-import os
-import platform
-from gensim.models import Word2Vec
-import numpy as np
-from sklearn.neural_network import MLPClassifier
+from myfuncs import get_label_by_entity_relation_list
+from myfuncs import MyRNNClassifier
 
 
 model_dir = '/Users/karloar/Documents/other/ltp_data_v3.4.0'
@@ -32,7 +33,7 @@ def main():
 
     # 设置参数
     params = Param()
-    params.trigger_neighbour = 3
+    params.trigger_neighbour = 13
 
     # 处理训练数据
     print('processing train data......')
@@ -47,10 +48,10 @@ def main():
     trigger_neighbour_vector_list = get_trigger_neighbour_vector_list(
         trigger_neighbour_list, model, vector_size
     )
-    train_data = get_feature_vector_for_nn(
+    train_data = get_feature_vector_for_rnn(
         trigger_neighbour_vector_list, vector_size
     )
-    train_label = np.array([relation_list.index(x[1]) for x in entity_relation_list])
+    train_label = get_label_by_entity_relation_list(entity_relation_list, relation_list)
 
     # 处理训练数据
     print('processing test data......')
@@ -63,17 +64,17 @@ def main():
     trigger_neighbour_vector_list = get_trigger_neighbour_vector_list(
         trigger_neighbour_list, model, vector_size
     )
-    test_data = get_feature_vector_for_nn(
+    test_data = get_feature_vector_for_rnn(
         trigger_neighbour_vector_list, vector_size
     )
-    test_label = np.array([relation_list.index(x[1]) for x in entity_relation_list])
-
+    test_label = get_label_by_entity_relation_list(entity_relation_list, relation_list)
     print('classifying......')
-    mlp = MLPClassifier(max_iter=5000, learning_rate_init=0.001, hidden_layer_sizes=(vector_size*2, ), activation='relu')
-    mlp.fit(train_data, train_label)
-    print('train accuracy:', mlp.score(train_data, train_label))
-    print('test accuracy:', mlp.score(test_data, test_label))
-
+    mrc = MyRNNClassifier(vector_size, len(relation_list), params.trigger_neighbour, vector_size*2)
+    mrc.fit(train_data, train_label)
+    print('train accuracy:', mrc.score(train_data, train_label))
+    print('test accuracy:', mrc.score(test_data, test_label))
+    mrc.close()
+    
 
 if __name__ == '__main__':
     main()

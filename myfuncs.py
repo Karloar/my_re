@@ -9,6 +9,7 @@ import re
 from time import time
 from stanfordcorenlp import StanfordCoreNLP
 import pickle as pkl
+import tensorflow as tf
 
 
 def load_data_zh(file):
@@ -609,7 +610,22 @@ def get_feature_vector_for_nn(trigger_neighbour_vector_list, vector_size):
     return feature_vector.astype(np.float32)
 
 
+def get_feature_vector_for_rnn(trigger_neighbour_vector_list, vector_size):
+    n_steps = len(trigger_neighbour_vector_list[0])
+    data_num = len(trigger_neighbour_vector_list)
+    feature_vector = np.zeros((data_num, n_steps * vector_size))
+    for i in range(data_num):
+        for j in range(n_steps):
+            from_idx = j * vector_size
+            to_idx = from_idx + vector_size
+            feature_vector[i, from_idx:to_idx] = np.array(trigger_neighbour_vector_list[i][j]).reshape(1, vector_size)
+    return feature_vector.astype(np.float32)
+
+
 def get_trigger_neighbour_words(trigger, word_list, trigger_neighbour):
+    '''
+        返回trigger附近的词，如果句子的长度达不到要求，则用'@@@'来补全
+    '''
     n = trigger_neighbour // 2
     len_word_list = len(word_list)
     if trigger_neighbour <= len_word_list and trigger_neighbour > 0:
@@ -619,6 +635,11 @@ def get_trigger_neighbour_words(trigger, word_list, trigger_neighbour):
             return word_list[:trigger_neighbour]
         elif trigger[2] + n >= len_word_list:
             return word_list[len_word_list-trigger_neighbour:]
+    elif trigger_neighbour > len_word_list:
+        diff_len = trigger_neighbour - len_word_list
+        rtv_word_list = word_list[:]
+        rtv_word_list.extend(['@@@'] * diff_len)
+        return rtv_word_list
     return word_list
 
 
@@ -654,7 +675,6 @@ def get_batch(data, batch_size, step):
     batch_num = int(data_num / batch_size + 0.5)
     from_idx = step % batch_num * batch_size
     to_idx = min([data_num, from_idx + batch_size])
-    print(from_idx, '---------', to_idx)
     return data[from_idx:to_idx, :]
 
 
@@ -669,3 +689,87 @@ def get_label_by_entity_relation_list(entity_relation_list: list, relation_list:
         idx = relation_list.index(entity_relation_list[i][1])
         label[i, idx] = 1
     return label
+
+
+class MyRNNClassifier:
+
+    def __init__(
+        self,
+        n_inputs,
+        n_classes,
+        n_steps,
+        n_hidden_units,
+        learing_rate=0.001,
+        batch_size=200,
+        training_iter=5000
+    ):
+        self._nsteps = n_steps
+        self._learning_rate = learing_rate
+        self._batch_size = batch_size
+        self._nclasses = n_classes
+        self._nhidden_units = n_hidden_units
+        self._ninputs = n_inputs
+        self._training_iter = training_iter
+        self.create_graph()
+    
+    def create_graph(self):
+        self._x = tf.placeholder(tf.float32, [None, self._nsteps, self._ninputs])
+        self._y = tf.placeholder(tf.float32, [None, self._nclasses])
+        self._nbatch_size = tf.placeholder(tf.int32, [], name="batch_size")
+        self._weights = {
+            'in': tf.Variable(tf.random_normal([self._ninputs, self._nhidden_units]) * 0.01),
+            'out': tf.Variable(tf.random_normal([self._nhidden_units, self._nclasses]) * 0.01)
+        }
+        self._biases = {
+            'in': tf.Variable(tf.constant(0.1, shape=[self._nhidden_units, ])),
+            'out': tf.Variable(tf.constant(0.1, shape=[self._nclasses, ]))
+        }
+
+        self._pred = self.rnn(self._x, self._weights, self._biases)
+        self._cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self._pred, labels=self._y))
+        self._train_op = tf.train.AdamOptimizer(self._learning_rate).minimize(self._cost)
+        self._correct_pred = tf.equal(tf.argmax(self._pred, 1), tf.argmax(self._y, 1))
+        self._accuracy = tf.reduce_mean(tf.cast(self._correct_pred, tf.float32))
+    
+    def rnn(self, X, weight, biase):
+        X = tf.reshape(X, [-1, self._ninputs])
+        X_in = tf.matmul(X, weight['in']) + biase['in']
+        X_in = tf.reshape(X_in, [-1, self._nsteps, self._nhidden_units])
+
+        lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self._nhidden_units, forget_bias=1.0, state_is_tuple=True)
+        _init_state = lstm_cell.zero_state(self._nbatch_size, dtype=tf.float32)
+        outputs, state = tf.nn.dynamic_rnn(lstm_cell, X_in, initial_state=_init_state, time_major=False)
+
+        results = tf.matmul(state[1], weight['out']) + biase['out']
+        return results
+
+
+    def fit(self, data, label):
+        self._sess = tf.Session()
+        init = tf.global_variables_initializer()
+        self._sess.run(init)
+        for step in range(self._training_iter):
+            batch_xs = get_batch(data, self._batch_size, step)
+            batch_xs = batch_xs.reshape([self._batch_size, self._nsteps, self._ninputs])
+            batch_ys = get_batch(label, self._batch_size, step)
+            self._sess.run(self._train_op, feed_dict={
+                self._nbatch_size: self._batch_size,
+                self._x: batch_xs,
+                self._y: batch_ys
+            })
+    
+    def score(self, data, label):
+        data = data.reshape([data.shape[0], self._nsteps, self._ninputs])
+        return self._sess.run(self._accuracy, feed_dict={
+            self._nbatch_size: data.shape[0],
+            self._x: data,
+            self._y: label
+        })
+    
+    def close(self):
+        self._sess.close()
+    # def __enter__(self):
+    #     return self
+
+    # def __exit__(self, exc_type, exc_val, exc_tb):
+    #     self.sess.close()
