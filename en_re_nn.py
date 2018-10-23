@@ -32,7 +32,7 @@ def main():
 
     # 设置参数
     params = Param()
-    params.trigger_neighbour = 3
+    params.trigger_neighbour = 13
 
     # 处理训练数据
     print('processing train data......')
@@ -47,12 +47,13 @@ def main():
     trigger_neighbour_vector_list = get_trigger_neighbour_vector_list(
         trigger_neighbour_list, model, vector_size
     )
+
     train_data = get_feature_vector_for_nn(
         trigger_neighbour_vector_list, vector_size
     )
     train_label = np.array([relation_list.index(x[1]) for x in entity_relation_list])
 
-    # 处理训练数据
+    # 处理测试数据
     print('processing test data......')
     sents, entity_relation_list = load_data_en(test_file)
     trigger_neighbour_list = get_trigger_neighbour_list_from_sents(

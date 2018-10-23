@@ -10,6 +10,7 @@ from time import time
 from stanfordcorenlp import StanfordCoreNLP
 import pickle as pkl
 import tensorflow as tf
+import string
 
 
 def load_data_zh(file):
@@ -267,6 +268,9 @@ def get_trigger_candidate(word_list, i_vector, postags, q_set, f_set, style='pyl
         if idx in q_set or idx in f_set:
             continue
         if postags[idx].upper() not in postag_set:
+            continue
+        # 去掉标点
+        if word[0] in string.punctuation:
             continue
         relation_trigger_list.append((word, i_val, idx))
     return relation_trigger_list
@@ -530,8 +534,7 @@ def get_trigger_neighbour_list_from_sents(sents, entity_relation_list, save_file
         pyltp_model = params.pyltp_model
     if hasattr(params, 'user_dict'):
         user_dict = params.user_dict
-
-
+    
     if save_file and os.path.exists(save_file):
         return pkl.load(open(save_file, 'rb'))
     else:
@@ -566,6 +569,8 @@ def get_trigger_neighbour_list_from_sents(sents, entity_relation_list, save_file
             )
             trigger = get_trigger_by_ap_cluster(trigger_candidate, i_vector)
             trigger_neighbour_words = get_trigger_neighbour_words(trigger, word_list, trigger_neighbour)
+            # print('-----------', trigger, trigger_neighbour_words) 
+
             data_list.append(trigger_neighbour_words)
         if style == 'stanfordcorenlp':
             nlp_tool.close()
@@ -605,6 +610,8 @@ def get_feature_vector_for_nn(trigger_neighbour_vector_list, vector_size):
         tv = np.zeros((1, vector_size))
         for trigger_vector in trigger_neighbour_vector_list[i]:
             tv += trigger_vector
+        # if len(trigger_neighbour_vector_list[i]) == 0:
+        #     print(i, tv)
         tv /= len(trigger_neighbour_vector_list[i])
         feature_vector = np.concatenate([feature_vector, tv], axis=0)
     return feature_vector.astype(np.float32)
@@ -624,23 +631,34 @@ def get_feature_vector_for_rnn(trigger_neighbour_vector_list, vector_size):
 
 def get_trigger_neighbour_words(trigger, word_list, trigger_neighbour):
     '''
-        返回trigger附近的词，如果句子的长度达不到要求，则用'@@@'来补全
+        返回trigger附近的词，去除标点，如果句子的长度达不到要求，则用'@@@'来补全
     '''
     n = trigger_neighbour // 2
-    len_word_list = len(word_list)
-    if trigger_neighbour <= len_word_list and trigger_neighbour > 0:
-        if trigger[2] - n >= 0 and trigger[2] + n < len_word_list:
-            return word_list[trigger[2]-n:trigger[2]+n+1]
-        elif trigger[2] - n < 0:
-            return word_list[:trigger_neighbour]
-        elif trigger[2] + n >= len_word_list:
-            return word_list[len_word_list-trigger_neighbour:]
-    elif trigger_neighbour > len_word_list:
-        diff_len = trigger_neighbour - len_word_list
-        rtv_word_list = word_list[:]
+    word_idx_list = get_word_idx_list(word_list)
+    len_word_idx_list = len(word_idx_list)
+    # print('-------', trigger, '------------------')
+    trigger_idx = word_idx_list.index(trigger[2])
+    if trigger_neighbour <= len_word_idx_list and trigger_neighbour > 0:
+        if trigger_idx - n >= 0 and trigger_idx + n < len_word_idx_list:
+            return list(map(lambda idx: word_list[idx], word_idx_list[trigger_idx-n:trigger_idx+n+1]))
+        elif trigger_idx - n < 0:
+            return list(map(lambda idx: word_list[idx], word_idx_list[:trigger_neighbour]))
+        elif trigger_idx + n >= len_word_idx_list:
+            return list(map(lambda idx: word_list[idx], word_idx_list[len_word_idx_list-trigger_neighbour:]))
+    elif trigger_neighbour > len_word_idx_list:
+        diff_len = trigger_neighbour - len_word_idx_list
+        rtv_word_list = list(map(lambda idx: word_list[idx], word_idx_list))
         rtv_word_list.extend(['@@@'] * diff_len)
         return rtv_word_list
-    return word_list
+    return list(map(lambda idx: word_list[idx], word_idx_list))
+
+
+def get_word_idx_list(word_list):
+    idx_list = []
+    for i in range(len(word_list)):
+        if not word_list[i][0] in string.punctuation:
+            idx_list.append(i)
+    return idx_list
 
 
 def get_nlp_tool(style, pyltp_model=None, user_dict=None):
