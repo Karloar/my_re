@@ -717,9 +717,10 @@ class MyRNNClassifier:
         n_classes,
         n_steps,
         n_hidden_units,
+        keep_prob,
         learing_rate=0.001,
         batch_size=200,
-        training_iter=5000
+        training_iter=2000,
     ):
         self._nsteps = n_steps
         self._learning_rate = learing_rate
@@ -728,6 +729,7 @@ class MyRNNClassifier:
         self._nhidden_units = n_hidden_units
         self._ninputs = n_inputs
         self._training_iter = training_iter
+        self._keep_prob = keep_prob
         self.create_graph()
     
     def create_graph(self):
@@ -754,27 +756,35 @@ class MyRNNClassifier:
         X_in = tf.matmul(X, weight['in']) + biase['in']
         X_in = tf.reshape(X_in, [-1, self._nsteps, self._nhidden_units])
 
-        lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self._nhidden_units, forget_bias=1.0, state_is_tuple=True)
+        lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(self._nhidden_units, forget_bias=1, state_is_tuple=True)
+        lstm_cell = tf.nn.rnn_cell.DropoutWrapper(lstm_cell, output_keep_prob=self._keep_prob)
         _init_state = lstm_cell.zero_state(self._nbatch_size, dtype=tf.float32)
         outputs, state = tf.nn.dynamic_rnn(lstm_cell, X_in, initial_state=_init_state, time_major=False)
 
         results = tf.matmul(state[1], weight['out']) + biase['out']
         return results
 
-
     def fit(self, data, label):
         self._sess = tf.Session()
         init = tf.global_variables_initializer()
         self._sess.run(init)
+
         for step in range(self._training_iter):
             batch_xs = get_batch(data, self._batch_size, step)
             batch_xs = batch_xs.reshape([self._batch_size, self._nsteps, self._ninputs])
             batch_ys = get_batch(label, self._batch_size, step)
-            self._sess.run(self._train_op, feed_dict={
+            loss, _ = self._sess.run([self._cost, self._train_op], feed_dict={
                 self._nbatch_size: self._batch_size,
                 self._x: batch_xs,
                 self._y: batch_ys
             })
+            # if step % 10 == 0:
+            #     print(step, '--', self._sess.run(self._accuracy, feed_dict={
+            #         self._nbatch_size: self._batch_size,
+            #         self._x: batch_xs,
+            #         self._y: batch_ys
+            #     }))
+            # print(step, '  loss:', loss)
     
     def score(self, data, label):
         data = data.reshape([data.shape[0], self._nsteps, self._ninputs])
