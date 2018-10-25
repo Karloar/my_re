@@ -33,12 +33,12 @@ def main():
 
     # 设置参数
     params = Param()
-    params.trigger_neighbour = 13
+    params.trigger_neighbour = 9
 
     # 处理训练数据
     print('processing train data......')
     sents, entity_relation_list = load_data_en(train_file)
-    relation_list = list(set(x[1] for x in entity_relation_list))
+    relation_list = sorted(list(set(x[1] for x in entity_relation_list)))
     trigger_neighbour_list = get_trigger_neighbour_list_from_sents(
         sents, entity_relation_list,
         os.path.join(os.getcwd(), train_neighbour_words_pkl),
@@ -69,10 +69,12 @@ def main():
     )
     test_label = get_label_by_entity_relation_list(entity_relation_list, relation_list)
     print('classifying......')
-    mrc = MyRNNClassifier(vector_size, len(relation_list), params.trigger_neighbour, vector_size*2, keep_prob=0.7)
+    mrc = MyRNNClassifier(vector_size, len(relation_list), params.trigger_neighbour, vector_size*2, keep_prob=0.7, use_attention=False)
     mrc.fit(train_data, train_label)
-    print('train accuracy:', mrc.score(train_data, train_label))
-    print('test accuracy:', mrc.score(test_data, test_label))
+    print('train accuracy:', mrc.accuracy(train_data, train_label))
+    print('test accuracy:', mrc.accuracy(test_data, test_label))
+    print(relation_list)
+    print(mrc.report(test_data, test_label))
     mrc.close()
     
 

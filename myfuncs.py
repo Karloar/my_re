@@ -11,6 +11,8 @@ from stanfordcorenlp import StanfordCoreNLP
 import pickle as pkl
 import tensorflow as tf
 import string
+from attention import attention
+from sklearn import metrics
 
 
 def load_data_zh(file):
@@ -47,6 +49,9 @@ def load_data_en(data_file):
             relation = lines[i+1].strip()
             if len(re.findall(r'(\(e1,e2\)|\(e2,e1\))', relation)) > 0:
                 relation = relation[:-7]
+            # # 去掉关系为Other的句子
+            # if relation.lower() == 'other':
+            #     continue
             sent_list.append(sent.strip()[1:-1])
             entity_relation_list.append((e1, relation, e2))
     return sent_list, entity_relation_list
@@ -721,6 +726,7 @@ class MyRNNClassifier:
         learing_rate=0.001,
         batch_size=200,
         training_iter=2000,
+        use_attention=False
     ):
         self._nsteps = n_steps
         self._learning_rate = learing_rate
@@ -730,6 +736,7 @@ class MyRNNClassifier:
         self._ninputs = n_inputs
         self._training_iter = training_iter
         self._keep_prob = keep_prob
+        self._use_attention = use_attention
         self.create_graph()
     
     def create_graph(self):
@@ -760,8 +767,10 @@ class MyRNNClassifier:
         lstm_cell = tf.nn.rnn_cell.DropoutWrapper(lstm_cell, output_keep_prob=self._keep_prob)
         _init_state = lstm_cell.zero_state(self._nbatch_size, dtype=tf.float32)
         outputs, state = tf.nn.dynamic_rnn(lstm_cell, X_in, initial_state=_init_state, time_major=False)
-
-        results = tf.matmul(state[1], weight['out']) + biase['out']
+        value = outputs[:, -1, :]
+        if self._use_attention:
+            value = attention(outputs, self._nhidden_units)
+        results = tf.matmul(value, weight['out']) + biase['out']
         return results
 
     def fit(self, data, label):
@@ -771,6 +780,9 @@ class MyRNNClassifier:
 
         for step in range(self._training_iter):
             batch_xs = get_batch(data, self._batch_size, step)
+            # 确保batch_size与数据量一致
+            self._batch_size = min([self._batch_size, len(batch_xs)])
+
             batch_xs = batch_xs.reshape([self._batch_size, self._nsteps, self._ninputs])
             batch_ys = get_batch(label, self._batch_size, step)
             loss, _ = self._sess.run([self._cost, self._train_op], feed_dict={
@@ -786,7 +798,7 @@ class MyRNNClassifier:
             #     }))
             # print(step, '  loss:', loss)
     
-    def score(self, data, label):
+    def accuracy(self, data, label):
         data = data.reshape([data.shape[0], self._nsteps, self._ninputs])
         return self._sess.run(self._accuracy, feed_dict={
             self._nbatch_size: data.shape[0],
@@ -794,6 +806,16 @@ class MyRNNClassifier:
             self._y: label
         })
     
+    def report(self, data, label):
+        data = data.reshape([data.shape[0], self._nsteps, self._ninputs])
+        pred = self._sess.run(self._pred, feed_dict={
+            self._nbatch_size: data.shape[0],
+            self._x: data,
+            self._y: label
+        })
+        return metrics.classification_report(np.argmax(label, axis=1), np.argmax(pred, axis=1))
+        
+
     def close(self):
         self._sess.close()
     # def __enter__(self):
