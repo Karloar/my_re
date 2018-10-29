@@ -10,6 +10,7 @@ import platform
 from gensim.models import Word2Vec
 import numpy as np
 from sklearn.neural_network import MLPClassifier
+from sklearn import metrics
 
 
 model_dir = '/Users/karloar/Documents/other/ltp_data_v3.4.0'
@@ -32,12 +33,12 @@ def main():
 
     # 设置参数
     params = Param()
-    params.trigger_neighbour = 3
+    params.trigger_neighbour = 13
 
     # 处理训练数据
     print('processing train data......')
     sents, entity_relation_list = load_data_en(train_file)
-    relation_list = list(set(x[1] for x in entity_relation_list))
+    relation_list = sorted(list(set(x[1] for x in entity_relation_list)))
     trigger_neighbour_list = get_trigger_neighbour_list_from_sents(
         sents, entity_relation_list,
         os.path.join(os.getcwd(), train_neighbour_words_pkl),
@@ -72,9 +73,13 @@ def main():
     print('classifying......')
     mlp = MLPClassifier(max_iter=5000, learning_rate_init=0.001, hidden_layer_sizes=(vector_size*2, ), activation='relu')
     mlp.fit(train_data, train_label)
+    train_pred = mlp.predict(train_data)
+    test_pred = mlp.predict(test_data)
     print('train accuracy:', mlp.score(train_data, train_label))
     print('test accuracy:', mlp.score(test_data, test_label))
-
+    print(relation_list)
+    print(metrics.classification_report(test_label, test_pred))
+  
 
 if __name__ == '__main__':
     main()

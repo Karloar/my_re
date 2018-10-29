@@ -42,10 +42,10 @@ def load_data_en(data_file):
             _, sent = lines[i].split('\t')
             e1 = re.findall(r'<e1>[\s\S]+</e1>', sent)[0][4:-5]
             e2 = re.findall(r'<e2>[\s\S]+</e2>', sent)[0][4:-5]
-            sent = sent.replace('<e1>', '')
-            sent = sent.replace('</e1>', '')
-            sent = sent.replace('<e2>', '')
-            sent = sent.replace('</e2>', '')
+            sent = sent.replace('<e1>', ' ')
+            sent = sent.replace('</e1>', ' ')
+            sent = sent.replace('<e2>', ' ')
+            sent = sent.replace('</e2>', ' ')
             relation = lines[i+1].strip()
             if len(re.findall(r'(\(e1,e2\)|\(e2,e1\))', relation)) > 0:
                 relation = relation[:-7]
@@ -564,6 +564,7 @@ def get_trigger_neighbour_list_from_sents(sents, entity_relation_list, save_file
                 beta=beta,
                 error=error
             )
+            # print(i_vector)
             trigger_candidate = get_trigger_candidate(
                 word_list,
                 i_vector,
